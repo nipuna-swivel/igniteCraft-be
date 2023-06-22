@@ -20,10 +20,10 @@ export class AdminController {
     return this.adminService.createAdmin(createAdminDto);
   }
 
-  // @Get()
-  // getAllAdmins() {
-  //   return this.adminService.getAllAdmins();
-  // }
+  @Get()
+  getAllAdmins() {
+    return this.adminService.getAllAdmins();
+  }
 
   // @Get(':id')
   // getAdminById(@Param('id') id: string) {
