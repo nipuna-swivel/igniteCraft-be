@@ -21,7 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { IdParamDto } from 'src/common/dto';
 import { ApiResponse } from 'src/common/responses';
-import { AccessTokenGuard } from '../auth/guards';
+import { AccessTokenGuard } from '../auth/guard';
 import { CreateProductDto, ProductQuery, UpdateProductDto } from './dto';
 import { ProductsService } from './products.service';
 
