@@ -9,7 +9,10 @@ import { UpdateUserDto } from './dto';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<User>, private configService: ConfigService) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<User>,
+    private configService: ConfigService,
+  ) {}
 
   checkIfAdminExists() {
     const username = this.configService.get('ADMIN_USERNAME');
