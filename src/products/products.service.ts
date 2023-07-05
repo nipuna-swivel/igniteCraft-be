@@ -1,59 +1,165 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { CreateProductDto } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
-import { Product, ProductDocument } from 'src/products/schemas/product.schema';
-import { BadRequestException } from '@nestjs/common';
+import { S3Service } from 'src/shared/s3.service';
+import { CreateProductDto, ProductQuery, UpdateProductDto } from './dto';
+import { Product, ProductDocument } from './schemas/product.schema';
 
 @Injectable()
 export class ProductsService {
   constructor(
-    @InjectModel(Product.name)
-    private readonly productModel: Model<ProductDocument>,
+    @InjectModel(Product.name) private productModel: Model<Product>,
+    private s3Service: S3Service,
   ) {}
 
-  async createProduct(createProductDto: CreateProductDto): Promise<Product> {
-    try {
-      const createdProduct = new this.productModel(createProductDto);
-      return createdProduct.save();
-    } catch (error) {
-      throw new BadRequestException(error.messege);
+  /**
+   * Create a new product
+   * @param {CreateProductDto} createProductDto
+   * @param {Express.Multer.File} file
+   * @returns {Promise<Product>}
+   */
+  async create(
+    createProductDto: CreateProductDto,
+    file: Express.Multer.File,
+  ): Promise<Product> {
+    if (file) {
+      createProductDto.image = await this.s3Service.upload(file); // Assign uploaded image url
     }
+    return this.productModel.create(createProductDto);
   }
 
-  async getAllProducts(): Promise<Product[]> {
-    try {
-      return this.productModel.find();
-    } catch (error) {
-      throw new BadRequestException(error.messege);
+  /**
+   * Retrieves all products from the database.
+   * @param {ProductQuery} query
+   * @returns {Promise<Product[]>}
+   */
+  async findAll(query: ProductQuery): Promise<Product[]> {
+    const { name, category, orderBy, order, limit } = query;
+
+    // To avoid sort by not defined fields and control which fields can be used to sort
+    const orderByValues = {
+      name: true,
+      qty: true,
+      price: true,
+      category: true,
+    };
+    // To avoid sort by not defined orders and control which order can be used to sort
+    const orderValues = { asc: true, desc: true };
+
+    const filter: any = {};
+    const sort = {};
+
+    // Set filter values
+    if (name) filter.name = new RegExp(name, 'i');
+    if (category) filter.category = category;
+
+    // Set sorting field and order
+    if (orderByValues[orderBy] && orderValues[order]) {
+      sort[orderBy] = order;
+    } else {
+      sort['createdAt'] = 'desc';
     }
+
+    return await this.productModel
+      .find(filter)
+      .collation({ locale: 'en' })
+      .sort(sort)
+      .limit(limit)
+      .exec();
   }
 
-  async getProductById(id: string): Promise<Product[]> {
-    try {
-      return this.productModel.findById(id);
-    } catch (error) {
-      throw new BadRequestException(error.messege);
+  /**
+   * Updates an existing product.
+   * @param {string} id
+   * @param {UpdateProductDto} updateProductDto
+   * @param {Express.Multer.File} file
+   * @returns {Promise<Product>}
+   */
+  async update(
+    id: string,
+    updateProductDto: UpdateProductDto,
+    file: Express.Multer.File,
+  ): Promise<Product> {
+    const product = await this.productModel.findById(id);
+
+    // Throw not found error when product is not found
+    if (!product) {
+      throw new NotFoundException('Product not found');
     }
+
+    // Update product image if new image has been provided
+    if (file) {
+      updateProductDto.image = await this.s3Service.upload(file, product.image); // Assign uploaded image url
+    }
+
+    const { name, description, qty, price, category, image } = updateProductDto;
+
+    product.name = name;
+    product.description = description;
+    product.qty = qty;
+    product.price = price;
+    product.category = category;
+    product.image = image;
+
+    return product.save();
   }
 
-  async updateProduct(id: string, updateProductDto: UpdateProductDto) {
-    try {
-      return this.productModel.updateOne(
-        { _id: id },
-        { $set: { ...updateProductDto } },
-      );
-    } catch (error) {
-      throw new BadRequestException(error.messege);
+  /**
+   * Delete an product by id
+   * @param {string} id
+   * @returns {Promise<boolean>}
+   */
+  async delete(id: string): Promise<boolean> {
+    const product = await this.productModel.findById(id);
+
+    // Throw not found error when product is not found
+    if (!product) {
+      throw new NotFoundException('Product not found');
     }
+
+    const result = await this.productModel.deleteOne({ _id: id });
+    return !!result.deletedCount;
   }
 
-  async deleteProduct(id: string) {
-    try {
-      return this.productModel.deleteOne({ _id: id });
-    } catch (error) {
-      throw new BadRequestException(error.messege);
+  /**
+   * Retrieves an product by id.
+   * @param {string} id
+   * @returns {Promise<Product>}
+   */
+  async findById(id: string): Promise<Product> {
+    const product = await this.productModel.findById(id);
+
+    // Throw not found error when product is not found
+    if (!product) {
+      throw new NotFoundException('Product not found');
     }
+
+    return product;
+  }
+
+  /**
+   * Retrieves list of products by ids
+   * @param {string[]} ids
+   * @returns {Promise<ProductDocument[]>}
+   */
+  async findByIds(ids: string[]): Promise<ProductDocument[]> {
+    return this.productModel.find({
+      _id: {
+        $in: ids,
+      },
+    });
+  }
+
+  /**
+   * Find by id and update
+   * @param {string} id
+   * @param {object} updateObject
+   * @returns {Promise<ProductDocument>}
+   */
+  async findByIdAndUpdate(
+    id: string,
+    updateObject: object,
+  ): Promise<ProductDocument> {
+    return this.productModel.findByIdAndUpdate(id, updateObject);
   }
 }

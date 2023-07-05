@@ -1,26 +1,30 @@
-import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AdminModule } from './admin/admin.module';
-import { ProductsModule } from './products/products.module';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
-import { OrdersModule } from './orders/orders.module';
+import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
+import { OrdersModule } from './orders/orders.module';
+import { ProductsModule } from './products/products.module';
+import { UsersModule } from './users/users.module';
+import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AnaliticsController } from './analitics/analitics.controller';
-import { AnaliticsModule } from './analitics/analitics.module';
+import { HTTPLoggerMiddleware } from './middlewares/http-logger.middleware';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    MongooseModule.forRoot(process.env.DB_URI),
+    AuthModule,
+    UsersModule,
     AdminModule,
     ProductsModule,
-    MongooseModule.forRoot(
-      'mongodb+srv://Nipuna:QwbLqITi8N7BQ330@cluster0.jy2kp1m.mongodb.net/craftDb?retryWrites=true&w=majority',
-    ),
     OrdersModule,
-    AuthModule,
-    AnaliticsModule,
   ],
-  controllers: [AppController, AnaliticsController],
+  controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(HTTPLoggerMiddleware).forRoutes('*');
+  }
+}

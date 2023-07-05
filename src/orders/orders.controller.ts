@@ -1,42 +1,88 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Delete,
   Body,
+  Controller,
+  Delete,
+  Get,
   Param,
-  Put,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiTags,
+  ApiUnprocessableEntityResponse,
+} from '@nestjs/swagger';
+import { IdParamDto } from 'src/common/dto';
+import { ApiResponse } from 'src/common/responses';
+import { AccessTokenGuard } from '../auth/guard';
+import { CreateOrderDto, OrderQuery, UpdateOrderStatusDto } from './dto';
 import { OrdersService } from './orders.service';
-import { CreateOrderDto } from './dto/create-order.dto';
-import { UpdateOrderDto } from './dto/update-order.dto';
 
+@ApiTags('Orders')
+//@Controller({ path: 'orders', version: '1' })
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Post()
-  createOrder(@Body() createOrderDto: CreateOrderDto) {
-    return this.ordersService.createOrder(createOrderDto);
+  @ApiOkResponse({ description: 'Order created successfully.' })
+  @ApiUnprocessableEntityResponse({
+    description: 'One or more items in the order are invalid or unavailable.',
+  })
+  async create(@Body() createOrderDto: CreateOrderDto): Promise<ApiResponse> {
+    const data = await this.ordersService.create(createOrderDto);
+    return new ApiResponse(
+      data,
+      'Your order has been placed successfully. Thank you for choosing our service',
+    );
   }
 
+  @UseGuards(AccessTokenGuard)
   @Get()
-  getAllOrders() {
-    return this.ordersService.getAllOrders();
+  @ApiBearerAuth()
+  @ApiOkResponse({ description: 'Orders fetched successfully.' })
+  async findAll(@Query() query: OrderQuery): Promise<ApiResponse> {
+    const data = await this.ordersService.findAll(query);
+    return new ApiResponse(data);
   }
 
-  @Get(':id')
-  getOrderById(@Param('id') id: string) {
-    return this.ordersService.getOrderById(id);
+  @UseGuards(AccessTokenGuard)
+  @Patch(':id')
+  @ApiBearerAuth()
+  @ApiOkResponse({ description: 'Order status updated successfully.' })
+  @ApiNotFoundResponse({ description: 'Order not found' })
+  async updateStatus(
+    @Param() params: IdParamDto,
+    @Body() updateOrderStatusDto: UpdateOrderStatusDto,
+  ): Promise<ApiResponse> {
+    const data = await this.ordersService.updateStatus(
+      params.id,
+      updateOrderStatusDto,
+    );
+    return new ApiResponse(data, 'Order status updated successfully');
   }
 
-  @Put(':id')
-  updateOrder(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
-    return this.ordersService.updateOrder(id, updateOrderDto);
-  }
-
+  @UseGuards(AccessTokenGuard)
   @Delete(':id')
-  deleteOrder(@Param('id') id: string) {
-    return this.ordersService.deleteOrder(id);
+  @ApiBearerAuth()
+  @ApiOkResponse({ description: 'Order deleted successfully.' })
+  @ApiNotFoundResponse({ description: 'Order not found' })
+  async delete(@Param() params: IdParamDto): Promise<ApiResponse> {
+    await this.ordersService.delete(params.id);
+    return new ApiResponse(null, 'Order deleted successfully');
+  }
+
+  @UseGuards(AccessTokenGuard)
+  @Get(':id')
+  @ApiBearerAuth()
+  @ApiOkResponse({ description: 'Order fetched successfully.' })
+  @ApiNotFoundResponse({ description: 'Order not found' })
+  async findById(@Param() params: IdParamDto): Promise<ApiResponse> {
+    const data = await this.ordersService.findById(params.id);
+    return new ApiResponse(data);
   }
 }
