@@ -23,7 +23,6 @@ import { CreateOrderDto, OrderQuery, UpdateOrderStatusDto } from './dto';
 import { OrdersService } from './orders.service';
 
 @ApiTags('Orders')
-//@Controller({ path: 'orders', version: '1' })
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}

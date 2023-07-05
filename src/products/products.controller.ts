@@ -26,7 +26,6 @@ import { CreateProductDto, ProductQuery, UpdateProductDto } from './dto';
 import { ProductsService } from './products.service';
 
 @ApiTags('Products')
-//@Controller({ path: 'products', version: '1' })
 @Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
