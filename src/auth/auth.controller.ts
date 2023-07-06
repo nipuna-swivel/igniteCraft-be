@@ -36,10 +36,9 @@ export class AuthController {
   }
 
   @Get('logout')
-  @ApiBearerAuth()
   async logout(@Req() req, @Res() res) {
-    const jwt = await this.authService.login('');
-    this.jwtToken = jwt;
+   // const jwt = await this.authService.login('');
+   // this.jwtToken = jwt;
     return 'successfully logout';
   }
 }

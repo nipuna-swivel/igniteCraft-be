@@ -39,7 +39,7 @@ export class AdminService {
 
   async getAdminByName(username: string): Promise<Admin> {
     try {
-      return this.adminModel.findOne({ userName: username });
+      return this.adminModel.findOne({ username: username });
     } catch (error) {
       throw new BadRequestException(error.messege);
     }

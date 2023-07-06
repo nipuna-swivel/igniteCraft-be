@@ -8,7 +8,7 @@ export class Admin {
   @Prop({ required: true })
   name: string;
   @Prop({ required: true })
-  userName: string;
+  username: string;
   @Prop({ required: true })
   password: string;
   @Prop({ required: true })

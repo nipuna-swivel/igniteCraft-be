@@ -1,6 +1,6 @@
 export class CreateAdminDto {
   name: string;
-  usernames: string;
+  username: string;
   password: string;
   email: string;
 }
